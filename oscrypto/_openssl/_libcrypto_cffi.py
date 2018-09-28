@@ -215,6 +215,20 @@ else:
         void EVP_MD_CTX_free(EVP_MD_CTX *ctx);
     """)
 
+if version_info < (1, 1):
+    # OpenSSL 1.1.0 introduced CRYPTO_memdup().
+    # For earlier versions, use CRYPTO_malloc + memmove.
+    def oscrypto_CRYPTO_memdup(bufvalue, buflen, filename, linenumber):
+        allocated = libcrypto.CRYPTO_malloc(buflen, filename, linenumber)
+        if not allocated:
+            return
+        ffi.memmove(allocated, bufvalue, buflen)
+        return allocated
+else:
+    ffi.cdef("""
+        void *CRYPTO_memdup(const void *, size_t, const char *, int);
+    """)
+
 if version_info < (1,):
     ffi.cdef("""
         typedef ... *DSA_SIG;

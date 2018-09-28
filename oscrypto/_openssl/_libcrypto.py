@@ -10,12 +10,14 @@ try:
         version as libcrypto_version,
         version_info as libcrypto_version_info
     )
+    _is_cffi = True
 except (FFIEngineError, ImportError):
     from ._libcrypto_ctypes import (
         libcrypto,
         version as libcrypto_version,
         version_info as libcrypto_version_info
     )
+    _is_cffi = False
 
 
 __all__ = [
@@ -25,6 +27,7 @@ __all__ = [
     'libcrypto_version_info',
     'LibcryptoConst',
     'peek_openssl_error',
+    'oscrypto_CRYPTO_memdup',
 ]
 
 
@@ -101,6 +104,17 @@ def peek_openssl_error():
     return (lib, func, reason)
 
 
+if libcrypto_version_info >= (1, 1):
+    # OpenSSL 1.1.0 introduced CRYPTO_memdup().
+    oscrypto_CRYPTO_memdup = libcrypto.CRYPTO_memdup
+else:
+    # For earlier versions, use CRYPTO_malloc + memmove.
+    if _is_cffi:
+        from ._libcrypto_cffi import oscrypto_CRYPTO_memdup
+    else:
+        from ._libcrypto_ctypes import oscrypto_CRYPTO_memdup
+
+
 class LibcryptoConst():
     EVP_CTRL_SET_RC2_KEY_BITS = 3
 
@@ -142,3 +156,6 @@ class LibcryptoConst():
 
     EVP_PKEY_ECDH_KDF_NONE = 1
     EVP_PKEY_ECDH_KDF_X9_62 = 2
+
+
+del _is_cffi

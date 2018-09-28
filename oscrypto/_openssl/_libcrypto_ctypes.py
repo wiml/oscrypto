@@ -3,7 +3,7 @@ from __future__ import unicode_literals, division, absolute_import, print_functi
 
 import re
 from ctypes.util import find_library
-from ctypes import CDLL, c_void_p, c_char_p, c_int, c_ulong, c_uint, c_long, c_size_t, POINTER
+from ctypes import CDLL, c_void_p, c_char_p, c_int, c_ulong, c_uint, c_long, c_size_t, POINTER, memmove
 
 from .. import _backend_config
 from .._errors import pretty_message
@@ -126,6 +126,15 @@ try:
         c_void_p
     ]
     libcrypto.CRYPTO_free.restype = None
+
+    if version_info >= (1, 1):
+        libcrypto.CRYPTO_memdup.argtypes = [
+            c_void_p,
+            c_size_t,
+            c_char_p,
+            c_int
+        ]
+        libcrypto.CRYPTO_memdup.restype = c_void_p
 
     # This allocates the memory and inits
     libcrypto.EVP_CIPHER_CTX_new.argtype = []
@@ -725,6 +734,15 @@ try:
 except (AttributeError):
     raise FFIEngineError('Error initializing ctypes')
 
+if version_info < (1, 1):
+    # OpenSSL 1.1.0 introduced CRYPTO_memdup().
+    # For earlier versions, use CRYPTO_malloc + memmove.
+    def oscrypto_CRYPTO_memdup(bufvalue, buflen, filename, linenumber):
+        allocated = libcrypto.CRYPTO_malloc(buflen, filename, linenumber)
+        if not allocated:
+            return
+        memmove(allocated, bufvalue, buflen)
+        return allocated
 
 setattr(libcrypto, 'EVP_PKEY_CTX', EVP_PKEY_CTX)
 setattr(libcrypto, 'BIGNUM', BIGNUM)
