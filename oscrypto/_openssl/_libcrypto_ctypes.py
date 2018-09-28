@@ -88,6 +88,7 @@ P_BIGNUM = POINTER(BIGNUM)
 
 p_int = POINTER(c_int)
 p_uint = POINTER(c_uint)
+p_size_t = POINTER(c_size_t)
 
 try:
     if version_info < (1, 1):
@@ -113,6 +114,18 @@ try:
         c_char_p
     ]
     libcrypto.OPENSSL_config.restype = None
+
+    libcrypto.CRYPTO_malloc.argtypes = [
+        c_size_t,
+        c_char_p,
+        c_int
+    ]
+    libcrypto.CRYPTO_malloc.restype = c_void_p
+
+    libcrypto.CRYPTO_free.argtypes = [
+        c_void_p
+    ]
+    libcrypto.CRYPTO_free.restype = None
 
     # This allocates the memory and inits
     libcrypto.EVP_CIPHER_CTX_new.argtype = []
@@ -624,6 +637,18 @@ try:
         libcrypto.EVP_MD_CTX_set_flags.restype = None
 
     else:
+
+        libcrypto.EVP_PKEY_CTX_new.argtypes = [
+            P_EVP_PKEY,
+            P_ENGINE
+        ]
+        libcrypto.EVP_PKEY_CTX_new.restype = P_EVP_PKEY_CTX
+
+        libcrypto.EVP_PKEY_CTX_free.argtypes = [
+            P_EVP_PKEY_CTX
+        ]
+        libcrypto.EVP_PKEY_CTX_free.restype = None
+
         libcrypto.PKCS5_PBKDF2_HMAC.argtypes = [
             c_char_p,
             c_int,
@@ -648,7 +673,7 @@ try:
         libcrypto.EVP_DigestSignFinal.argtypes = [
             P_EVP_MD_CTX,
             c_char_p,
-            POINTER(c_size_t)
+            p_size_t
         ]
         libcrypto.EVP_DigestSignFinal.restype = c_int
 
@@ -677,6 +702,25 @@ try:
             c_void_p
         ]
         libcrypto.EVP_PKEY_CTX_ctrl.restype = c_int
+
+        libcrypto.EVP_PKEY_derive_init.argtypes = [
+            P_EVP_PKEY_CTX,
+        ]
+        libcrypto.EVP_PKEY_derive_init.restype = c_int
+
+        libcrypto.EVP_PKEY_derive_set_peer.argtypes = [
+            P_EVP_PKEY_CTX,
+            P_EVP_PKEY,
+        ]
+        libcrypto.EVP_PKEY_derive_set_peer.restype = c_int
+
+        libcrypto.EVP_PKEY_derive.argtypes = [
+            P_EVP_PKEY_CTX,
+            c_char_p,
+            p_size_t,
+        ]
+        libcrypto.EVP_PKEY_derive.restype = c_int
+
 
 except (AttributeError):
     raise FFIEngineError('Error initializing ctypes')

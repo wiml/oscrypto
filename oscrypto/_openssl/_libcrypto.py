@@ -120,7 +120,9 @@ class LibcryptoConst():
     EVP_PKEY_RSA = 6
     EVP_PKEY_OP_SIGN = 1 << 3
     EVP_PKEY_OP_VERIFY = 1 << 4
+    EVP_PKEY_OP_DERIVE = 1 << 10
 
+    NID_X9_62_id_ecPublicKey = 408
     NID_X9_62_prime256v1 = 415
     NID_secp384r1 = 715
     NID_secp521r1 = 716
@@ -128,3 +130,15 @@ class LibcryptoConst():
     OPENSSL_EC_NAMED_CURVE = 1
 
     DH_GENERATOR_2 = 2
+
+    # Full ECDH key agreement support appeared in OpenSSL 1.0.2
+    EVP_PKEY_EC = NID_X9_62_id_ecPublicKey
+    EVP_PKEY_ALG_CTRL = 0x1000
+    EVP_PKEY_CTRL_EC_ECDH_COFACTOR = EVP_PKEY_ALG_CTRL + 3
+    EVP_PKEY_CTRL_EC_KDF_TYPE = EVP_PKEY_ALG_CTRL + 4
+    EVP_PKEY_CTRL_EC_KDF_MD = EVP_PKEY_ALG_CTRL + 5
+    EVP_PKEY_CTRL_EC_KDF_OUTLEN = EVP_PKEY_ALG_CTRL + 7
+    EVP_PKEY_CTRL_EC_KDF_UKM = EVP_PKEY_ALG_CTRL + 9
+
+    EVP_PKEY_ECDH_KDF_NONE = 1
+    EVP_PKEY_ECDH_KDF_X9_62 = 2

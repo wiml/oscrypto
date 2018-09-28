@@ -105,6 +105,9 @@ ffi.cdef("""
 
     void OPENSSL_config(const char *config_name);
 
+    void *CRYPTO_malloc(size_t, const char *, int);
+    void CRYPTO_free(void *);
+
     EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
     void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
 
@@ -261,5 +264,10 @@ else:
         int EVP_DigestVerifyInit(EVP_MD_CTX *ctx, EVP_PKEY_CTX **pctx, const EVP_MD *type, ENGINE *e, EVP_PKEY *pkey);
         int EVP_DigestVerifyFinal(EVP_MD_CTX *ctx, const char *sig, size_t siglen);
 
+        EVP_PKEY_CTX *EVP_PKEY_CTX_new(EVP_PKEY *, ENGINE *);
+        void EVP_PKEY_CTX_free(EVP_PKEY_CTX *);
         int EVP_PKEY_CTX_ctrl(EVP_PKEY_CTX *ctx, int keytype, int optype, int cmd, int p1, void *p2);
+        int EVP_PKEY_derive_init(EVP_PKEY_CTX *);
+        int EVP_PKEY_derive_set_peer(EVP_PKEY_CTX *, EVP_PKEY *);
+        int EVP_PKEY_derive(EVP_PKEY_CTX *, char *, size_t *);
     """)
