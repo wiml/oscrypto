@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division, absolute_import, print_functi
 
 import unittest
 import sys
+import binascii
 
 from oscrypto import kdf, _pkcs5
 
@@ -42,3 +43,39 @@ class KDFTests(unittest.TestCase):
             b'\x7C\xD9\xFD\x3E\x2B\x3B\xE7\x69\x1A\x44\xE3\xBE\xF0\xF9\xEA\x0F\xB9\xB8\x97\xD4\xE3\x25\xD9\xD1',
             key
         )
+
+    def test_python_X9_63(self):
+        def _test(hash_algorithm, Z_, shared_, output_):
+            Z = binascii.a2b_hex(Z_)
+            shared = binascii.a2b_hex(shared_)
+            output = binascii.a2b_base64(output_)
+
+            computed = kdf.x963_kdf(
+                hash_algorithm,
+                Z, len(output), shared
+            )
+            self.assertEqual(computed, output)
+
+        # This is a selection of test vectors
+        # from NIST CAVS for ANS X9.63-2001
+
+        _test('sha1',
+              '1c7d7b5f0597b03d06a018466ed1a93e30ed4b04dc64ccdd',
+              '',
+              'v3Hf/Y9NmSI5Nr60b+6MzA==')
+
+        _test('sha256',
+              '22518b10e70f2a3f243810ae3254139efbee04aa57c7af7d',
+              '75eef81aa3041e33b80971203d2c0c52',
+              'xJivdxYcxZ8pYrmnE+KyFRUtE5dmzjSndt8Rhmppvy5SoT2cfG/IeMUM'
+              'XqC8ewDg2iRHz9h09s+S8w0AlxEUhVAMkMOvi0h4ctBGhdFMjR3I1/oI'
+              'vrDOCrq8EfC9SWJpFC1DUlp45bx5oX9ZZ2pXBtxU1U1NHwvX44YSjsJq'
+              '/CE=')
+
+        _test('sha384',
+              '75a43f6464c2954efd9558d2d9c76cfcafefec3f07fe14af',
+              '6744c4a41d5bd7f4ca94ea488605c3d3',
+              'UEWmJSybbrgN68Z+DRGgKL+OHwsnTROuvMfVZeG3PtIoxfQZXr0QRKr5'
+              'p1XGlFpyl2f482l62ylB3w9En9/Kj4Sr78UBHUuWitH3m1Nb8STj3PEx'
+              '+PiU7mM6BAw0pkcFREl649lsHkvNxZFNQMSnPx4XSym9V1XRqgo93T+U'
+              'KNU=')
