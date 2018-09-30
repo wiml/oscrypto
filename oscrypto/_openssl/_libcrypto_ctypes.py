@@ -82,6 +82,7 @@ P_DH = c_void_p
 P_RSA = c_void_p
 P_DSA = c_void_p
 P_EC_KEY = c_void_p
+P_EC_POINT = c_void_p
 P_BN_GENCB = c_void_p
 BIGNUM = c_void_p
 P_BIGNUM = POINTER(BIGNUM)
@@ -593,11 +594,6 @@ try:
         ]
         libcrypto.EVP_PKEY_get1_DSA.restype = P_DSA
 
-        libcrypto.EVP_PKEY_get1_EC_KEY.argtypes = [
-            P_EVP_PKEY
-        ]
-        libcrypto.EVP_PKEY_get1_EC_KEY.restype = P_EC_KEY
-
         libcrypto.RSA_verify_PKCS1_PSS.argtypes = [
             P_RSA,
             c_char_p,
@@ -729,6 +725,26 @@ try:
             p_size_t,
         ]
         libcrypto.EVP_PKEY_derive.restype = c_int
+
+    if version_info < (1, 0, 2):
+        libcrypto.EVP_PKEY_get1_EC_KEY.argtypes = [
+            P_EVP_PKEY
+        ]
+        libcrypto.EVP_PKEY_get1_EC_KEY.restype = P_EC_KEY
+
+        libcrypto.EC_KEY_get0_public_key.argtypes = [
+            P_EC_KEY
+        ]
+        libcrypto.EC_KEY_get0_public_key.restype = P_EC_POINT
+
+        libcrypto.ECDH_compute_key.argtypes = [
+            c_char_p,
+            c_size_t,
+            P_EC_POINT,
+            P_EC_KEY,
+            c_void_p
+        ]
+        libcrypto.ECDH_compute_key.restype = c_int
 
 
 except (AttributeError):

@@ -98,6 +98,7 @@ ffi.cdef("""
     typedef ... EVP_PKEY_CTX;
     typedef ... BN_GENCB;
     typedef ... BIGNUM;
+    typedef ... EC_POINT;
 
     unsigned long ERR_get_error(void);
     char *ERR_error_string(unsigned long e, char *buf);
@@ -229,6 +230,14 @@ else:
         void *CRYPTO_memdup(const void *, size_t, const char *, int);
     """)
 
+if version_info < (1, 0, 2):
+    ffi.cdef("""
+        EC_KEY *EVP_PKEY_get1_EC_KEY(EVP_PKEY *pkey);
+        const EC_POINT *EC_KEY_get0_public_key(const EC_KEY *);
+        int ECDH_compute_key(void *out, size_t outlen, const EC_POINT *pub_key,
+                             EC_KEY *ecdh, void *(*KDF)() );
+    """)
+
 if version_info < (1,):
     ffi.cdef("""
         typedef ... *DSA_SIG;
@@ -250,7 +259,6 @@ if version_info < (1,):
         void ECDSA_SIG_free(ECDSA_SIG *a);
 
         DSA *EVP_PKEY_get1_DSA(EVP_PKEY *pkey);
-        EC_KEY *EVP_PKEY_get1_EC_KEY(EVP_PKEY *pkey);
 
         int RSA_verify_PKCS1_PSS(RSA *rsa, const char *mHash,
                         const EVP_MD *Hash, const char *EM,
