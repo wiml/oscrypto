@@ -266,7 +266,11 @@ def pbkdf1(hash_algorithm, password, salt, iterations, key_length):
 def x963_kdf(hash_algorithm, secret, length, shared_info):
     """
     Computes the key derivation function from X9.63, as described
-    in NIST SP 800-56C section 4.1.
+    in SEC1 section 3.6.
+
+    (Note that this KDF is similar to, but not compatible with,
+    the KDF described in NIST SP 800-56C section 4.1 and in earlier
+    revisions of NIST SP 800-56A.)
 
     :param hash_algorithm:
         The name of the hash algorithm to use, such as "md5" or "sha256".
