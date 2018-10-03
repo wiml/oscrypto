@@ -222,6 +222,26 @@ else:
         OSStatus SSLSetProtocolVersionMax(SSLContextRef context, SSLProtocol maxVersion);
     """)
 
+if version_info >= (10, 12):
+    ffi.cdef("""
+    CFDataRef SecKeyCopyKeyExchangeResult(SecKeyRef, CFStringRef, SecKeyRef, CFDictionaryRef, CFErrorRef *);
+
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandard;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactor;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandardX963SHA1;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactorX963SHA1;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandardX963SHA224;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactorX963SHA224;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandardX963SHA256;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactorX963SHA256;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandardX963SHA384;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactorX963SHA384;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeStandardX963SHA512;
+    CFStringRef kSecKeyAlgorithmECDHKeyExchangeCofactorX963SHA512;
+    CFStringRef kSecKeyKeyExchangeParameterSharedInfo;
+    CFStringRef kSecKeyKeyExchangeParameterRequestedSize;
+    """)
+
 security_path = find_library('Security')
 if not security_path:
     raise LibraryNotFoundError('The library Security could not be found')

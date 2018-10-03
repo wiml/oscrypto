@@ -246,6 +246,15 @@ try:
     ]
     Security.SecKeyRawVerify.restype = OSStatus
 
+    Security.SecKeyCopyKeyExchangeResult.argtypes = [
+        SecKeyRef,
+        CFStringRef,
+        SecKeyRef,
+        CFDictionaryRef,
+        POINTER(CFErrorRef)
+    ]
+    Security.SecKeyCopyKeyExchangeResult.restype = CFDataRef
+
     Security.SecKeyGeneratePair.argtypes = [
         CFDictionaryRef,
         POINTER(SecKeyRef),
@@ -595,6 +604,17 @@ try:
     setattr(Security, 'kSecAttrKeyTypeRC2', CFTypeRef.in_dll(Security, 'kSecAttrKeyTypeRC2'))
     setattr(Security, 'kSecAttrKeyType3DES', CFTypeRef.in_dll(Security, 'kSecAttrKeyType3DES'))
     setattr(Security, 'kSecAttrKeyTypeDES', CFTypeRef.in_dll(Security, 'kSecAttrKeyTypeDES'))
+
+    setattr(Security, 'kSecKeyKeyExchangeParameterRequestedSize',
+            CFStringRef.in_dll(Security, 'kSecKeyKeyExchangeParameterRequestedSize'))
+    setattr(Security, 'kSecKeyKeyExchangeParameterSharedInfo',
+            CFStringRef.in_dll(Security, 'kSecKeyKeyExchangeParameterSharedInfo'))
+
+    for variant in ('Standard', 'Cofactor'):
+        for kdf in ('',  'X963SHA1', 'X963SHA224',
+                    'X963SHA256', 'X963SHA384', 'X963SHA512'):
+            symbol = 'kSecKeyAlgorithmECDHKeyExchange' + variant + kdf
+            setattr(Security, symbol, CFTypeRef.in_dll(Security, symbol))
 
 except (AttributeError):
     raise FFIEngineError('Error initializing ctypes')
