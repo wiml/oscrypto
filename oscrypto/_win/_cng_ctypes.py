@@ -23,6 +23,7 @@ except (OSError) as e:
 
 BCRYPT_ALG_HANDLE = wintypes.HANDLE
 BCRYPT_KEY_HANDLE = wintypes.HANDLE
+BCRYPT_SECRET_HANDLE = wintypes.HANDLE
 NTSTATUS = wintypes.ULONG
 PUCHAR = c_char_p
 PBYTE = c_char_p
@@ -144,6 +145,30 @@ try:
     ]
     bcrypt.BCryptDeriveKeyPBKDF2.restype = NTSTATUS
 
+    bcrypt.BCryptSecretAgreement.argtypes = [
+        BCRYPT_KEY_HANDLE,
+        BCRYPT_KEY_HANDLE,
+        POINTER(BCRYPT_SECRET_HANDLE),
+        ULONG
+    ]
+    bcrypt.BCryptSecretAgreement.restype = NTSTATUS
+
+    bcrypt.BCryptDeriveKey.argtypes = [
+        BCRYPT_SECRET_HANDLE,
+        LPCWSTR
+        c_void_p,  # BCryptBufferDesc *pParameterList,
+        PUCHAR,
+        ULONG,
+        POINTER(ULONG),
+        ULONG
+    ]
+    bcrypt.BCryptDeriveKey.restype = NTSTATUS
+
+    bcrypt.BCryptDestroySecret.argtypes = [
+        BCRYPT_SECRET_HANDLE
+    ]
+    bcrypt.BCryptDestroySecret.restype = NTSTATUS
+
     bcrypt.BCryptGenRandom.argtypes = [
         BCRYPT_ALG_HANDLE,
         PUCHAR,
@@ -247,6 +272,22 @@ class BCRYPT_KEY_DATA_BLOB_HEADER(Structure):  # noqa
         ('dwMagic', ULONG),
         ('dwVersion', ULONG),
         ('cbKeyData', ULONG),
+    ]
+
+
+class BCryptBuffer(Structure):  # noqa
+    _fields_ = [
+        ('cbBuffer', ULONG),
+        ('BufferType', ULONG),
+        ('pvBuffer', c_void_p),
+    ]
+
+
+class BCryptBufferDesc(Structure):  # noqa
+    _fields_ = [
+        ('ulVersion', ULONG),
+        ('cBuffers', ULONG),
+        ('pBuffers', POINTER(BCryptBuffer)),
     ]
 
 

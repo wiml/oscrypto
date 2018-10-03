@@ -62,6 +62,7 @@ __all__ = [
     'Certificate',
     'dsa_sign',
     'dsa_verify',
+    'ecdh_derive_secret',
     'ecdsa_sign',
     'ecdsa_verify',
     'generate_pair',
