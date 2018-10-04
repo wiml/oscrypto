@@ -11,15 +11,16 @@ from .._ffi import (
     buffer_pointer,
     bytes_from_buffer,
     deref,
+    pointer_set,
     is_null,
     new,
     null,
     unwrap,
 )
-from ._libcrypto import libcrypto, LibcryptoConst, libcrypto_version_info, handle_openssl_error
+from ._libcrypto import libcrypto, LibcryptoConst, libcrypto_version_info, handle_openssl_error, oscrypto_CRYPTO_memdup
 from ..keys import parse_public, parse_certificate, parse_private, parse_pkcs12
 from ..errors import AsymmetricKeyError, IncompleteAsymmetricKeyError, SignatureError
-from .._types import type_name, str_cls, byte_cls, int_types
+from .._types import type_name, check_class_type, str_cls, byte_cls, int_types
 from ..util import constant_compare
 
 
@@ -27,6 +28,7 @@ __all__ = [
     'Certificate',
     'dsa_sign',
     'dsa_verify',
+    'ecdh_derive_secret',
     'ecdsa_sign',
     'ecdsa_verify',
     'generate_pair',
@@ -907,6 +909,288 @@ def rsa_oaep_decrypt(private_key, ciphertext):
     """
 
     return _decrypt(private_key, ciphertext, LibcryptoConst.RSA_PKCS1_OAEP_PADDING)
+
+
+def ecdh_derive_secret(private_key, public_key, cofactor, kdf, hash_algorithm=None, length=None, shared_info=None):
+    """
+    Derives a shared secret byte-string based on two EC keys and an
+    optional key derivation function (KDF).
+
+    :param private_key:
+        A PrivateKey object
+
+    :param public_key:
+        A Certificate or PublicKey object
+
+    :param cofactor:
+        True to use the cofactor variant of ECDH. Note that for curves
+        with a cofactor of 1 this has no effect on the result.
+
+    :param kdf:
+        A string naming the key derivation function used to transform
+        the EC agreement result into a shared secret key. Either
+        "X9.63" or "raw".
+
+    :param hash_algorithm:
+        For the X9.63 KDF, the name of the hash algorithm to use.
+        For example "sha1" or "sha256".
+
+    :param length:
+        For the X9.63 KDF, the length in bytes of the desired output.
+
+    :param shared_info:
+        A byte string containing supplementary input to the KDF.
+        This is the string denoted SharedInfo in X9.63, and FixedInfo
+        in NIST SP 800-56C.
+
+    :return:
+        A byte string of length `length`.
+    """
+
+    check_class_type(public_key, 'public_key', Certificate, PublicKey)
+    if public_key.algorithm != 'ec':
+        raise AsymmetricKeyError(pretty_message(
+            '''
+            The key specified is not an EC public key, but %s
+            ''',
+            public_key.algorithm.upper()
+        ))
+
+    check_class_type(private_key, 'private_key', PrivateKey)
+    if private_key.algorithm != 'ec':
+        raise AsymmetricKeyError(pretty_message(
+            '''
+            The key specified is not an EC private key, but %s
+            ''',
+            private_key.algorithm.upper()
+        ))
+
+    if kdf == 'raw':
+        if not (hash_algorithm is None and
+                length is None and
+                shared_info is None):
+            raise ValueError(pretty_message(
+                """
+                If no KDF is used, KDF parameters must be None
+                """
+            ))
+    elif kdf == 'X9.63':
+        if not isinstance(length, int_types):
+            raise TypeError(pretty_message(
+                '''
+                Output length must be an integer, not %s
+                ''',
+                type_name(length)
+            ))
+        if length < 1:
+            raise ValueError("Output length must be positive")
+
+        if not isinstance(shared_info, byte_cls):
+            raise TypeError(pretty_message(
+                '''
+                shared_info must be a byte string, not %s
+                ''',
+                type_name(shared_info)
+            ))
+        # A zero-length shared_info is perfectly valid, although
+        # not usually the best choice for a protocol design. We don't
+        # allow None, though, since that's more likely to be
+        # a programming error than an intentional choice.
+    else:
+        raise ValueError(pretty_message(
+            '''
+            kdf must be "raw" or "X9.63", not %r
+            ''',
+            kdf
+        ))
+
+    if libcrypto_version_info < (1, 0, 2):
+        # Fall back to the non-EVP interface if our version of libcrypto is too old.
+        return _ecdh_compute_key(
+            private_key.evp_pkey,
+            public_key.evp_pkey,
+            private_key.bit_size,
+            kdf,
+            hash_algorithm=hash_algorithm,
+            length=length,
+            shared_info=shared_info)
+
+    evp_pkey_ctx = None
+    skeylength = new(libcrypto, 'size_t *')
+
+    try:
+        # Create a key derivation context containing the two keys.
+        evp_pkey_ctx = libcrypto.EVP_PKEY_CTX_new(private_key.evp_pkey, null())
+        if not evp_pkey_ctx:
+            handle_openssl_error(0)
+
+        res = libcrypto.EVP_PKEY_derive_init(evp_pkey_ctx)
+        handle_openssl_error(res)
+
+        res = libcrypto.EVP_PKEY_derive_set_peer(
+            evp_pkey_ctx,
+            public_key.evp_pkey
+        )
+        handle_openssl_error(res)
+
+        def _ctx_ctrl(op, p1, p2):
+            res = libcrypto.EVP_PKEY_CTX_ctrl(
+                evp_pkey_ctx,
+                LibcryptoConst.EVP_PKEY_EC,
+                LibcryptoConst.EVP_PKEY_OP_DERIVE,
+                op, p1, p2
+            )
+            handle_openssl_error(res)
+
+        _ctx_ctrl(
+            LibcryptoConst.EVP_PKEY_CTRL_EC_ECDH_COFACTOR,
+            (1 if cofactor else 0),
+            null()
+        )
+
+        # Configure it for the requested KDF
+        if kdf == 'raw':
+            _ctx_ctrl(
+                LibcryptoConst.EVP_PKEY_CTRL_EC_KDF_TYPE,
+                LibcryptoConst.EVP_PKEY_ECDH_KDF_NONE,
+                null()
+            )
+
+            # Ask how large the output buffer should be
+            res = libcrypto.EVP_PKEY_derive(evp_pkey_ctx, null(), skeylength)
+            handle_openssl_error(res)
+            length = deref(skeylength)
+            if not (16 <= length <= 1024):
+                # Sanity check: should never happen.
+                raise RuntimeError('Implausble result from EVP_PKEY_derive()')
+
+        elif kdf == 'X9.63':
+            _ctx_ctrl(
+                LibcryptoConst.EVP_PKEY_CTRL_EC_KDF_TYPE,
+                LibcryptoConst.EVP_PKEY_ECDH_KDF_X9_62,  # Sic.
+                null()
+            )
+
+            kdf_md = _evp_md_lookup(hash_algorithm)
+            _ctx_ctrl(
+                LibcryptoConst.EVP_PKEY_CTRL_EC_KDF_MD,
+                0, kdf_md
+            )
+
+            _ctx_ctrl(
+                LibcryptoConst.EVP_PKEY_CTRL_EC_KDF_OUTLEN,
+                length, null()
+            )
+            pointer_set(skeylength, length)
+
+            if len(shared_info) > 0:
+                # The EVP context takes ownership of the buffer we
+                # pass in and frees it with OPENSSL_free(), so we must
+                # give it a buffer allocated with OPENSSL_malloc().
+                ukm_buffer = oscrypto_CRYPTO_memdup(
+                    shared_info, len(shared_info),
+                    null(), 0
+                )
+                if not ukm_buffer:
+                    handle_openssl_error(0)
+                try:
+                    _ctx_ctrl(
+                        LibcryptoConst.EVP_PKEY_CTRL_EC_KDF_UKM,
+                        len(shared_info), ukm_buffer
+                    )
+                except:  # noqa
+                    libcrypto.CRYPTO_free(ukm_buffer)
+                    raise
+
+        # Allocate the result buffer, and perform the key derivation
+        # operation
+        skeybuffer = buffer_from_bytes(length)
+        res = libcrypto.EVP_PKEY_derive(evp_pkey_ctx, skeybuffer, skeylength)
+        handle_openssl_error(res)
+        produced_length = deref(skeylength)
+
+        if produced_length > length:
+            # We're already doomed at this point.
+            raise RuntimeError('Buffer overrun in EVP_PKEY_derive()')
+
+        return bytes_from_buffer(skeybuffer, produced_length)
+    finally:
+        if evp_pkey_ctx is not None:
+            libcrypto.EVP_PKEY_CTX_free(evp_pkey_ctx)
+
+
+if libcrypto_version_info < (1, 0, 2):
+    # Before version 1.0.2, OpenSSL's EVP interface doesn't support
+    # elliptic curve Diffie-Hellman, but the low level ECDH_compute_key()
+    # interface does. On the other hand, we want to use the EVP interface
+    # when possible, because it may work with hardware accelerators,
+    # (soft)-token-backed keys, etc.
+
+    from ..kdf import x963_kdf
+
+    def _ecdh_compute_key(private_evp, public_evp, group_size,
+                          kdf, hash_algorithm=None, length=None, shared_info=None):
+
+        # Add one bit for sign extension, then round to bytes.
+        buffer_size = int(group_size / 8) + 1
+
+        private_eckey = None
+        public_eckey = None
+
+        try:
+            private_eckey = libcrypto.EVP_PKEY_get1_EC_KEY(private_evp)
+            if not private_eckey:
+                handle_openssl_error(0)
+
+            public_eckey = libcrypto.EVP_PKEY_get1_EC_KEY(public_evp)
+            if not public_eckey:
+                handle_openssl_error(0)
+
+            ecdh_ka_buffer = buffer_from_bytes(buffer_size)
+            res = libcrypto.ECDH_compute_key(
+                ecdh_ka_buffer, buffer_size,
+                libcrypto.EC_KEY_get0_public_key(public_eckey),
+                private_eckey,
+                null())
+            handle_openssl_error(res)
+            secret = bytes_from_buffer(ecdh_ka_buffer, res)
+
+        finally:
+            if private_eckey is not None:
+                libcrypto.EC_KEY_free(private_eckey)
+            if public_eckey is not None:
+                libcrypto.EC_KEY_free(public_eckey)
+
+        if kdf == 'raw':
+            return secret
+        elif kdf == 'X9.63':
+            return x963_kdf(hash_algorithm, secret, length, shared_info)
+        else:
+            # Unreachable; our caller validates parameters.
+            raise NotImplementedError()
+
+
+_evp_md_table = {
+    'md5': libcrypto.EVP_md5,
+    'sha1': libcrypto.EVP_sha1,
+    'sha224': libcrypto.EVP_sha224,
+    'sha256': libcrypto.EVP_sha256,
+    'sha384': libcrypto.EVP_sha384,
+    'sha512': libcrypto.EVP_sha512
+}
+
+
+def _evp_md_lookup(hash_algorithm):
+    try:
+        return _evp_md_table[hash_algorithm]()
+    except KeyError:
+        supported_hashes = list(repr(name) for name in _evp_md_table.keys())
+        raise ValueError(
+            "hash algorithm must be " +
+            ", ".join(supported_hashes[:-1]) +
+            " or " + supported_hashes[-1] + ", not " +
+            repr(hash_algorithm)
+        )
 
 
 def _encrypt(certificate_or_public_key, data, padding):
