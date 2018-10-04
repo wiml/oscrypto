@@ -39,3 +39,31 @@ def type_name(value):
     if cls.__module__ in set(['builtins', '__builtin__']):
         return cls.__name__
     return '%s.%s' % (cls.__module__, cls.__name__)
+
+
+def check_class_type(value, parameter, *classes):
+    """
+    Checks that a user-supplied parameter is an instance of a given class,
+    and raises a TypeError if not.
+
+    :param value:
+        The value to check
+
+    :param parameter:
+        The name of the parameter by which value was passed.
+        Used to produce an informative exception string.
+
+    :param classes:
+        One or more class types.
+    """
+
+    if not isinstance(value, classes):
+        typelist = ' or '.join(aclass.__name__ for aclass in classes)
+        raise TypeError(
+            '{param} must be an instance of the {desired} class, not {found}'
+            .format(
+                param=parameter,
+                desired=typelist,
+                found=type_name(value)
+            )
+        )
