@@ -1,0 +1,78 @@
+These keys are from the NIST Cryptographic Algorithms Validation Suite
+(CAVS) example files for key agreement (KAS), 17.4, Dec 22, 2014. (The
+CAVS has a large number of test pairs, but we're not trying to
+validate the underlying implementation here, just our interface to
+it. So I've extracted a few examples that should cover the different
+parameters we pass in.)
+
+kas-p256-8-cavs:
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgkxc0XIUSa8vNwIio
+5XFcPqbkW28OPXVGCoyq6crqiJ+hRANCAARzuWG9QwG2SBRe1dup+G2w416acqIk
+wngsD94mNugcIJH2Hn/S0Kp0DavI0Mqsx0njBDoxh37U56iCGy9f/7dc
+-----END PRIVATE KEY-----
+
+kas-p256-8-iut:
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg3+/THBfx1N8VSP5e
+pLH/OpER+pffZ8idCXZx2hwCAuOhRANCAASmeHu05yzKrlRhohAl6h4P1L+1YXPn
+cIa+LeY/tZTVzAYC59OGMDvrMXctZ6wD7bn+42SQPb2BP/Pxk4Tihf+Q
+-----END PRIVATE KEY-----
+
+kas-p384-12-cavs:
+-----BEGIN PRIVATE KEY-----
+MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDDednl9ZHnrKi5NnNO1
+aNjSm6c78uKy6YdigGRTN4sIjApYjG7HJYx4qwkaHN2BPoahZANiAAQ2IzU9J7Yf
+rjmr+6kIAhfCfIc+rdA363oOF5BJbreFQ2ijN4ocwl2tcLLj5b3tRJiEurJ5J/JQ
+qIE7uMS+UcEPxtcTcqM2medVtZ72ts8SZp275nBeDpQ+iLdUK7u1lRI=
+-----END PRIVATE KEY-----
+
+kas-p384-12-iut:
+-----BEGIN PRIVATE KEY-----
+MIG2AgEAMBAGByqGSM49AgEGBSuBBAAiBIGeMIGbAgEBBDCl8CCNx0zbZ5faJQT9
+vVoI1EZP+C0Zlu7OUHjb08OqQWkIVpSJunkPy3XgSeYgM4qhZANiAASHHE3sWq0a
+q5U5V1e06eZPJIgULDXovmGClW38Plhks3G2hAS6G3ItNRVs5F90R0BZLaXWJN0w
+v1yp8XkW5Rkr6IugmZlV6USmQiSWPiVbSyGwIwsWovZuUkvu86ga8ho=
+-----END PRIVATE KEY-----
+
+kas-p521-10-cavs:
+-----BEGIN PRIVATE KEY-----
+MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIAvKsxYnau/KknhwQy
+/vIeESPGVB68HHjHmeTBt4QUn6WFR44naHqj8+LGrfc1FIrdY5vTUQZk1s0eV4hV
+6y3vSMyhgYkDgYYABAArn+Z3v7qApSgU1UkBzv+898IrPHNKcf6zTwCyhPRRJ3Kw
+UQCGVmHwyY4eqBa+nKuo1HIYjWaWLU0Nwxxv6CngwwHVEIhJFecU522FbyZbzPnA
+KPAXI5F1dVbaI963s3zwRuRjgqwPpx2B5DMG3jIGiSk3kkk7AIucYjw2njtPon/p
+TA==
+-----END PRIVATE KEY-----
+
+kas-p521-10-iut:
+-----BEGIN PRIVATE KEY-----
+MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIBURgqfFGC4uzRVyac
+vQiKvFlhWlg7BfIeaMvdxsPHYmUoO/i9B6gx54VCYgsauCIS9+gQIa/icgP/B7np
+A/A/xIShgYkDgYYABABK38gmw+Uw8n6TWWxAxNmLjwciB7otbQ1qCNTn+A/w6/OR
+M80fdBNmGg28XaPAoDm6iJKnTevAwtzTygqRdFwj/wBbY1Z/hq0hhQLvw+qIPmvS
+K6mgf0Ulc+hZTDo/V0pqqWGz3k8RboU+yJFdk/ODjWJ1CgBG/qkls7tmdMxfsyp8
++Q==
+-----END PRIVATE KEY-----
+
+
+
+These additional keys test some cases that the CAVS key pairs don't.
+
+ephem-p256-1:
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgTM6pI8m1LVuVyiel
+URi+k5surnW0iiRVLogyRpojIpmhRANCAARQFmOiGo3B1CCJusAl0HrSL+O+fnmD
+xc3qpv0FVbf1uMpAqTg/PpQrIrwPGVFEgIgfwDz4rtExw59tlfpfgZJK
+-----END PRIVATE KEY-----
+
+ephem-p521-1:
+-----BEGIN PRIVATE KEY-----
+MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIA3GwTR9Q1DLbtjGtv
+c3IoeK/VfVUOyVRR1CaX6fXdRIv4DrLsa70gZSFSgOGbdYhhmsmhcYD2pqwDR7Ej
+YK3sJ0qhgYkDgYYABAAaMxlo/+fQClXnrJU3itJ/4Jc7RQSSnt8phJ3rmFW+sus1
+eok9nRWEMDZyOc2+ow/HO+sMo8DuMK8prts7P9TS0QFjuWBqcEQcxM+kMliPaumz
+NmBxDitEl5wRY/AxUq+cBiqCvggJgtCdPttYjZu/6YHXe9xoQLYYfcYMiBP4G58M
+SQ==
+-----END PRIVATE KEY-----
+

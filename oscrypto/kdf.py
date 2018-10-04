@@ -3,6 +3,7 @@ from __future__ import unicode_literals, division, absolute_import, print_functi
 
 import sys
 import hashlib
+import struct
 from datetime import datetime
 
 from . import backend
@@ -29,6 +30,7 @@ __all__ = [
     'pbkdf2',
     'pbkdf2_iteration_calculator',
     'pkcs12_kdf',
+    'x963_kdf',
 ]
 
 
@@ -259,3 +261,66 @@ def pbkdf1(hash_algorithm, password, salt, iterations, key_length):
         output = algo(output).digest()
 
     return output[:key_length]
+
+
+def x963_kdf(hash_algorithm, secret, length, shared_info):
+    """
+    Computes the key derivation function from X9.63, as described
+    in SEC1 section 3.6.
+
+    (Note that this KDF is similar to, but not compatible with,
+    the KDF described in NIST SP 800-56C section 4.1 and in earlier
+    revisions of NIST SP 800-56A.)
+
+    :param hash_algorithm:
+        The name of the hash algorithm to use, such as "md5" or "sha256".
+
+    :param secret:
+        The secret input to the KDF, typically the result of a key-agreement
+        operation.
+
+    :param length:
+        The desired length of the output, in bytes.
+
+    :param shared_info:
+        A supplementary byte string, denoted FixedInfo in NIST 800-56C,
+        and SharedInfo in X9.63.
+
+    :return:
+        A byte string of length 'length'.
+    """
+
+    if not isinstance(secret, byte_cls):
+        raise TypeError(pretty_message(
+            '''
+            secret must be a byte string, not %s
+            ''',
+            (type_name(secret))
+        ))
+
+    if not isinstance(length, int_types):
+        raise TypeError(pretty_message(
+            '''
+            length must be an integer, not %s
+            ''',
+            (type_name(length))
+        ))
+
+    if not isinstance(shared_info, byte_cls):
+        raise TypeError(pretty_message(
+            '''
+            shared_info must be a byte string, not %s
+            ''',
+            (type_name(shared_info))
+        ))
+
+    hash_class = getattr(hashlib, hash_algorithm)
+    buf = b''
+    counter = 0
+    while len(buf) < length:
+        counter += 1
+        hash_context = hash_class(secret)
+        hash_context.update(struct.pack('>I', counter))
+        hash_context.update(shared_info)
+        buf += hash_context.digest()
+    return buf[:length]
