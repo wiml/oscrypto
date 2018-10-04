@@ -10,13 +10,13 @@ from ._core_foundation import CoreFoundation, CFHelpers, handle_cf_error
 from ..keys import parse_public, parse_certificate, parse_private, parse_pkcs12
 from ..errors import AsymmetricKeyError, IncompleteAsymmetricKeyError, SignatureError
 from .._pkcs1 import add_pss_padding, verify_pss_padding, remove_pkcs1v15_encryption_padding
-from .._types import type_name, str_cls, byte_cls, int_types
-
+from .._types import type_name, check_class_type, str_cls, byte_cls, int_types
 
 __all__ = [
     'Certificate',
     'dsa_sign',
     'dsa_verify',
+    'ecdh_derive_secret',
     'ecdsa_sign',
     'ecdsa_verify',
     'generate_pair',
@@ -1170,6 +1170,182 @@ def _decrypt(private_key, ciphertext, padding):
             CoreFoundation.CFRelease(cf_data)
         if sec_transform:
             CoreFoundation.CFRelease(sec_transform)
+
+
+_ecdh_X963_algorithms = dict(
+    (
+        (hashname, bool(cf == 'Cofactor')),
+        'kSecKeyAlgorithmECDHKeyExchange' + cf + symname
+    )
+    for (hashname, symname) in [
+            ('sha1',   'X963SHA1'),
+            ('sha224', 'X963SHA224'),
+            ('sha256', 'X963SHA256'),
+            ('sha384', 'X963SHA384'),
+            ('sha512', 'X963SHA512'),
+    ]
+    for cf in ('Cofactor', 'Standard')
+)
+
+
+def ecdh_derive_secret(private_key, public_key, cofactor, kdf, hash_algorithm=None, length=None, shared_info=None):
+    """
+    Derives a shared secret byte-string based on two EC keys and an
+    optional key derivation function (KDF).
+
+    :param private_key:
+        A PrivateKey object
+
+    :param public_key:
+        A Certificate or PublicKey object
+
+    :param cofactor:
+        True to use the cofactor variant of ECDH. Note that for curves
+        with a cofactor of 1 this has no effect on the result.
+
+    :param kdf:
+        A string naming the key derivation function used to transform
+        the EC agreement result into a shared secret key. Either
+        "X9.63" or "raw".
+
+    :param hash_algorithm:
+        For the X9.63 KDF, the name of the hash algorithm to use.
+        For example "sha1" or "sha256".
+
+    :param length:
+        For the X9.63 KDF, the length in bytes of the desired output.
+
+    :param shared_info:
+        A byte string containing supplementary input to the KDF.
+        This is the string denoted SharedInfo in X9.63, and FixedInfo
+        in NIST SP 800-56C.
+
+    :return:
+        A byte string of length `length`.
+    """
+
+    check_class_type(public_key, 'public_key', Certificate, PublicKey)
+    if public_key.algorithm != 'ec':
+        raise AsymmetricKeyError(pretty_message(
+            '''
+            The key specified is not an EC public key, but %s
+            ''',
+            public_key.algorithm.upper()
+        ))
+
+    check_class_type(private_key, 'private_key', PrivateKey)
+    if private_key.algorithm != 'ec':
+        raise AsymmetricKeyError(pretty_message(
+            '''
+            The key specified is not an EC private key, but %s
+            ''',
+            private_key.algorithm.upper()
+        ))
+
+    if kdf == 'raw':
+        if not (hash_algorithm is None and
+                length is None and
+                shared_info is None):
+            raise ValueError(pretty_message(
+                """
+                If no KDF is used, KDF parameters must be None
+                """
+            ))
+
+        parameters = None
+        if cofactor:
+            secAlgorithm = Security.kSecKeyAlgorithmECDHKeyExchangeCofactor
+        else:
+            secAlgorithm = Security.kSecKeyAlgorithmECDHKeyExchangeStandard
+
+    elif kdf == 'X9.63':
+        if not isinstance(length, int_types):
+            raise TypeError(pretty_message(
+                '''
+                Output length must be an integer, not %s
+                ''',
+                type_name(length)
+            ))
+        if length < 1:
+            raise ValueError("Output length must be positive")
+
+        if not isinstance(shared_info, byte_cls):
+            raise TypeError(pretty_message(
+                '''
+                shared_info must be a byte string, not %s
+                ''',
+                type_name(shared_info)
+            ))
+        # A zero-length shared_info is perfectly valid, although
+        # not usually the best choice for a protocol design. We don't
+        # allow None, though, since that's more likely to be
+        # a programming error than an intentional choice.
+
+        try:
+            secAlgorithmSym = _ecdh_X963_algorithms[
+                (hash_algorithm, bool(cofactor))
+            ]
+        except KeyError:
+            raise ValueError(
+                'hash_algorithm must be %s, not %r' % (
+                    ' or '.join(repr(h)
+                                for (h, cf) in _ecdh_X963_algorithms.keys()),
+                    hash_algorithm
+                ))
+
+        secAlgorithm = getattr(Security, secAlgorithmSym)
+        cfsupplementary = None
+        cflength = None
+        try:
+            parameter_pairs = []
+            if shared_info is not None and len(shared_info):
+                cfsupplementary = CFHelpers.cf_data_from_bytes(shared_info)
+                parameter_pairs.append(
+                    (Security.kSecKeyKeyExchangeParameterSharedInfo,
+                     cfsupplementary)
+                )
+
+            if length is not None:
+                cflength = CFHelpers.cf_number_from_integer(length)
+                parameter_pairs.append(
+                    (Security.kSecKeyKeyExchangeParameterRequestedSize,
+                     cflength)
+                )
+
+            parameters = CFHelpers.cf_dictionary_from_pairs(parameter_pairs)
+        finally:
+            if cfsupplementary is not None:
+                CoreFoundation.CFRelease(cfsupplementary)
+            if cflength is not None:
+                CoreFoundation.CFRelease(cflength)
+    else:
+        raise ValueError(pretty_message(
+            '''
+            kdf must be "raw" or "X9.63", not %r
+            ''',
+            kdf
+        ))
+
+    cf_shared_secret = None
+    try:
+        error_pointer = new(CoreFoundation, 'CFErrorRef *')
+        cf_shared_secret = Security.SecKeyCopyKeyExchangeResult(
+            private_key.sec_key_ref,
+            secAlgorithm,
+            public_key.sec_key_ref,
+            parameters or null(),
+            error_pointer
+        )
+        handle_cf_error(error_pointer)
+
+        shared_secret = CFHelpers.cf_data_to_bytes(cf_shared_secret)
+    finally:
+        if parameters is not None:
+            CoreFoundation.CFRelease(parameters)
+        if cf_shared_secret:
+            CoreFoundation.CFRelease(cf_shared_secret)
+
+    return shared_secret
 
 
 def rsa_pkcs1v15_verify(certificate_or_public_key, signature, data, hash_algorithm):
