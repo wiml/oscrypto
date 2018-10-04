@@ -548,10 +548,14 @@ class AsymmetricTests(unittest.TestCase):
             kwargs = {}
 
         self.assertEqual(
-            asymmetric.ecdh_derive_secret(self.privkey(key1), self.pubkey(key2), False, kdf, **kwargs),
+            asymmetric.ecdh_derive_secret(
+                self.privkey(key1), self.pubkey(key2),
+                False, kdf, **kwargs),
             expected_)
         self.assertEqual(
-            asymmetric.ecdh_derive_secret(self.privkey(key2), self.pubkey(key1), False, kdf, **kwargs),
+            asymmetric.ecdh_derive_secret(
+                self.privkey(key2), self.pubkey(key1),
+                False, kdf, **kwargs),
             expected_)
 
     def test_ecdh_agree_cavs(self):
@@ -560,9 +564,12 @@ class AsymmetricTests(unittest.TestCase):
         self.do_test_agreement('kas-p256-8-cavs', 'kas-p256-8-iut', 'raw',
                                'uM+i3d6DXPAc3tVNEqSPAcPOyZ5bB0/b5MybgpivJgQ=')
         self.do_test_agreement('kas-p384-12-cavs', 'kas-p384-12-iut', 'raw',
-                               '2r0EusfG+xRKJfkpwOiKhOjQx347yaF596B2UJmST4YxSkXqXog8Snej0SAlMRAF')
+                               '2r0EusfG+xRKJfkpwOiKhOjQx347yaF596B2UJmS'
+                               'T4YxSkXqXog8Snej0SAlMRAF')
         self.do_test_agreement('kas-p521-10-cavs', 'kas-p521-10-iut', 'raw',
-                               'ASwtwBJLZruS3HPwookHGJH3h/HWI6+fz6Tc6254Xm2o94VQVAq4WX+dOoHBEF7XnwaJPIm70yrdA2TzskqAJDhG')
+                               'ASwtwBJLZruS3HPwookHGJH3h/HWI6+fz6Tc6254'
+                               'Xm2o94VQVAq4WX+dOoHBEF7XnwaJPIm70yrdA2Tz'
+                               'skqAJDhG')
 
     def test_ecdh_agree_zf(self):
         # Test vectors generated to have leading zeroes in the intermediate
@@ -571,7 +578,9 @@ class AsymmetricTests(unittest.TestCase):
         self.do_test_agreement('kas-p256-8-cavs', 'ephem-p256-1', 'raw',
                                'AAAuR5zm+3s+nEGPXefe1lphUuyTqHj6kKEb330lpEM=')
         self.do_test_agreement('kas-p521-10-cavs', 'ephem-p521-1', 'raw',
-                               'AAAAArTkys5Kcc3eZ4ODSfpZ2X1YrpL+n0Hl6DoHoqTNINhk5aefqVPGT7VVlRPHlHyRskx86HyyK6WOuSUBCF4W')
+                               'AAAAArTkys5Kcc3eZ4ODSfpZ2X1YrpL+n0Hl6DoH'
+                               'oqTNINhk5aefqVPGT7VVlRPHlHyRskx86HyyK6WO'
+                               'uSUBCF4W')
 
     # The following aren't from CAVS, so they aren't official, but at
     # least they indicate consistency among the multiple oscrypto
@@ -580,44 +589,70 @@ class AsymmetricTests(unittest.TestCase):
     # are chosen to cover the different curves and hash functions.
     def test_ecdh_derive_sha1(self):
         self.do_test_agreement('kas-p256-8-cavs', 'kas-p256-8-iut', 'X9.63',
-                               'ymGlEWAA2CUS3WkhQZ22iZ5Jb0HQLLwg/PPjmiIl//2QyQxy8FvLqZAvBY3cryAeJB1eq7jJzt+rSCgHNWbDNE+d',
+                               'ymGlEWAA2CUS3WkhQZ22iZ5Jb0HQLLwg/PPjmiIl'
+                               '//2QyQxy8FvLqZAvBY3cryAeJB1eq7jJzt+rSCgH'
+                               'NWbDNE+d',
                                hash_algorithm='sha1', shared_info='====')
         self.do_test_agreement('kas-p256-8-cavs', 'kas-p256-8-iut', 'X9.63',
-                               'EcUpsut4TZ1hJvJdV+do1zA1y7qbTtPEEwpdfwcP5NE8BELVHhukJudkaahk7vqvn3d1iICST2+zZrPrnpulPVHO',
-                               hash_algorithm='sha1', shared_info='Tm90aGluZyBiZXNpZGUgcmVtYWlucy4gUm91bmQgdGhlIGRlY2F5IG9mIHRoYXQgY29sb3NzYWwgd3JlY2ssIGJvdW5kbGVzcyBhbmQgYmFyZSB0aGUgbG9uZSBhbmQgbGV2ZWwgc2FuZHMgc3RyZXRjaCBmYXIgYXdheS4=')
+                               'EcUpsut4TZ1hJvJdV+do1zA1y7qbTtPEEwpdfwcP'
+                               '5NE8BELVHhukJudkaahk7vqvn3d1iICST2+zZrPr'
+                               'npulPVHO',
+                               hash_algorithm='sha1', shared_info=''
+                               'Tm90aGluZyBiZXNpZGUgcmVtYWlucy4gUm91bmQg'
+                               'dGhlIGRlY2F5IG9mIHRoYXQgY29sb3NzYWwgd3Jl'
+                               'Y2ssIGJvdW5kbGVzcyBhbmQgYmFyZSB0aGUgbG9u'
+                               'ZSBhbmQgbGV2ZWwgc2FuZHMgc3RyZXRjaCBmYXIg'
+                               'YXdheS4=')
         self.do_test_agreement('kas-p256-8-cavs', 'ephem-p256-1', 'X9.63',
                                'AwBVyFhDqnRVJF+TtFyLMJ2YJ3zS8osep8zkLSCYb78=',
                                hash_algorithm='sha1', shared_info='Zk9PYkFS')
+
     def test_ecdh_derive_sha2_256(self):
         self.do_test_agreement('kas-p256-8-cavs', 'kas-p256-8-iut', 'X9.63',
-                               'afS+JChfjCtgENWawkrQRPLly7iQF8hy2VR5tobDBjZdhWA3Zc+ds9o2',
+                               'afS+JChfjCtgENWawkrQRPLly7iQF8hy2VR5tobD'
+                               'BjZdhWA3Zc+ds9o2',
                                hash_algorithm='sha256', shared_info='T0sh')
         self.do_test_agreement('kas-p256-8-cavs', 'ephem-p256-1', 'X9.63',
-                               'Yr05JEDrLl6BOZ9v9aj9eiM8mOmidmqYq5Pw0ucDaSh4H3klsLvMsYXHKJW5fmCR',
+                               'Yr05JEDrLl6BOZ9v9aj9eiM8mOmidmqYq5Pw0ucD'
+                               'aSh4H3klsLvMsYXHKJW5fmCR',
                                hash_algorithm='sha256', shared_info='====')
+
     def test_ecdh_derive_sha2_384(self):
         self.do_test_agreement('kas-p384-12-cavs', 'kas-p384-12-iut', 'X9.63',
-                               'M3hYqpl0CqoGF9IEOozXogawkRvE5+C3CyzYBgXiHOIr4djssmvFbUVo',
+                               'M3hYqpl0CqoGF9IEOozXogawkRvE5+C3CyzYBgXi'
+                               'HOIr4djssmvFbUVo',
                                hash_algorithm='sha384', shared_info='T0sh')
         self.do_test_agreement('kas-p521-10-cavs', 'ephem-p521-1', 'X9.63',
-                               'Cof8a8eRptTHeL1UGFQLKNvllNHAoDZWSkgkgg7C4QpB+5KkPKCSI+2DHvOYBLhME4sP/3zSDPSmCyi78ZLixvEM',
+                               'Cof8a8eRptTHeL1UGFQLKNvllNHAoDZWSkgkgg7C'
+                               '4QpB+5KkPKCSI+2DHvOYBLhME4sP/3zSDPSmCyi7'
+                               '8ZLixvEM',
                                hash_algorithm='sha384', shared_info='====')
+
     def test_ecdh_derive_sha2_512(self):
         self.do_test_agreement('kas-p256-8-cavs', 'test-ec-named', 'X9.63',
-                               'Yb8E+hmHBkvrXGCSWgstStQBpnXUa5ad8YjeF+OP9M2iTgS4t9sLkyOP',
-                               hash_algorithm='sha512', shared_info='RG9uJ3QgUGFuaWMh')
+                               'Yb8E+hmHBkvrXGCSWgstStQBpnXUa5ad8YjeF+OP'
+                               '9M2iTgS4t9sLkyOP',
+                               hash_algorithm='sha512',
+                               shared_info='RG9uJ3QgUGFuaWMh')
         self.do_test_agreement('kas-p384-12-cavs', 'kas-p384-12-iut', 'X9.63',
-                               'rb8RyGBxktTBv74Wyh3okl3uCoGNIRxGcNh8Vc4mTlce9y974VN3UpokbW2qLT3e4NJ2QR106BqS34JoCYt0+RkffO0Z7A==',
+                               'rb8RyGBxktTBv74Wyh3okl3uCoGNIRxGcNh8Vc4m'
+                               'Tlce9y974VN3UpokbW2qLT3e4NJ2QR106BqS34Jo'
+                               'CYt0+RkffO0Z7A==',
                                hash_algorithm='sha512', shared_info='Xl9e')
         self.do_test_agreement('kas-p521-10-cavs', 'kas-p521-10-iut', 'X9.63',
                                'yM3oKJcj3cH3bVz71qzwjoyloUiw',
                                hash_algorithm='sha512', shared_info='Xl9e')
         self.do_test_agreement('kas-p521-10-cavs', 'kas-p521-10-iut', 'X9.63',
-                               'KHSL8XS1keoYQ6nkd9YkgGCZUKWOD9wf/i3ozaJNrprjxosZZsl2w2UkD8tTxx9r46h8nvaDvTHy7dsQwBh2c5mr',
+                               'KHSL8XS1keoYQ6nkd9YkgGCZUKWOD9wf/i3ozaJN'
+                               'rprjxosZZsl2w2UkD8tTxx9r46h8nvaDvTHy7dsQ'
+                               'wBh2c5mr',
                                hash_algorithm='sha512', shared_info='====')
         self.do_test_agreement('kas-p521-10-cavs', 'ephem-p521-1', 'X9.63',
-                               '8DdBVSzh2mir5e7Ly3K7lsq0bz0VsQtnf6OPD1y25yNMOuVa9Hq2f8SVY2hmzL7jG6vdgTAItaBUlNesconFn9XA',
-                               hash_algorithm='sha512', shared_info='T3NzaWZyYWdlPw==')
+                               '8DdBVSzh2mir5e7Ly3K7lsq0bz0VsQtnf6OPD1y2'
+                               '5yNMOuVa9Hq2f8SVY2hmzL7jG6vdgTAItaBUlNes'
+                               'conFn9XA',
+                               hash_algorithm='sha512',
+                               shared_info='T3NzaWZyYWdlPw==')
 
 
 def ecdh_public_from_private(private_key):
@@ -632,4 +667,3 @@ def ecdh_public_from_private(private_key):
             'public_key': keydata
         })
     )
-
