@@ -2209,6 +2209,15 @@ def ecdsa_verify(certificate_or_public_key, signature, data, hash_algorithm):
     return _verify(certificate_or_public_key, signature, data, hash_algorithm)
 
 
+_bcrypt_hash_constant = {
+    'md5': BcryptConst.BCRYPT_MD5_ALGORITHM,
+    'sha1': BcryptConst.BCRYPT_SHA1_ALGORITHM,
+    'sha256': BcryptConst.BCRYPT_SHA256_ALGORITHM,
+    'sha384': BcryptConst.BCRYPT_SHA384_ALGORITHM,
+    'sha512': BcryptConst.BCRYPT_SHA512_ALGORITHM
+}
+
+
 def _verify(certificate_or_public_key, signature, data, hash_algorithm, rsa_pss_padding=False):
     """
     Verifies an RSA, DSA or ECDSA signature
@@ -3381,3 +3390,72 @@ def rsa_oaep_decrypt(private_key, ciphertext):
     """
 
     return _decrypt(private_key, ciphertext, rsa_oaep_padding=True)
+
+
+def _bcrypt_derive_X963(secret, hash_algorithm, length, shared_info):
+    # The BCrypt API does not provide access to the raw secret or
+    # an X9.63 KDF, but provides an interesting primitive: we can
+    # ask it for H(prefix || secret || suffix), which is enough
+    # to compute the popular KDFs, but not enough to easily leak the
+    # secret keys.
+
+    hash_length = _hash_lengths_bytes[hash_algorithm]
+    num_chunks = (length + hash_length - 1) // hash_length
+    if num_chunks > 255:
+        # The KDF can handle output lengths up to 2^32-1 blocks,
+        # but it's very rare for any application to need more than
+        # 2 or 3, so we only bother implementing the bottom
+        # 8 bits of the block counter.
+        raise ValueError(
+            'Output length (%d bytes) exceeds implementation limit' % (length,)
+        )
+
+    parameters = (BcryptConst.BCryptBufferDesc * 3)()
+    parameter_descriptor = BcryptConst.BCryptBufferDesc(
+        BcryptConst.BCRYPTBUFFER_VERSION,
+        3, parameters)
+
+    # Parameter 0 indicates the hash function we want, by name
+    parameters[0].BufferType = BcryptConst.KDF_HASH_ALGORITHM
+    parameters[0].pvBuffer = _bcrypt_hash_constant[hash_algorithm]
+    parameters[0].cbBuffer = ???
+
+    # Parameter 1 points to the 32-bit big-endian counter
+    counter_buffer = byte_array(4)
+    counter_buffer[0] = 0
+    counter_buffer[1] = 0
+    counter_buffer[2] = 0
+    parameters[1].BufferType = BcryptConst.KDF_SECRET_APPEND
+    parameters[1].pvBuffer = counter_buffer
+    parameters[1].cbBuffer = 4
+
+    # Parameter 2 points to the shared_info buffer, but
+    # we omit it if the shared_info is empty
+    if len(shared_info) == 0:
+        parameter_descriptor.cBuffers = 2
+    else:
+        info_buffer = buffer_from_bytes(shared_info)
+        parameters[2].BufferType = BcryptConst.KDF_SECRET_APPEND
+        parameters[2].pvBuffer = info_buffer
+        parameters[2].cbBuffer = len(shared_info)
+
+    # Finally, invoke BCryptDeriveKey as many times as needed to
+    # produce the number of bytes our caller asked for.
+    result_buffer = byte_array(length)
+    for counter in range(0, num_chunks):
+        counter_buffer[3] = counter + 1
+        if counter < num_chunks-1:
+            chunk_length = hash_length
+        else:
+            chunk_length = length - (counter * hash_length)
+        res = bcrypt.BCryptDeriveKey(
+            secret, BcryptConst.BCRYPT_KDF_HASH,
+            parameter_descriptor,
+            result_buffer + (counter * hash_length),
+            chunk_length, result_length,
+            0)
+        handle_error(res)
+        if result_length[0] != chunk_length:
+            raise RuntimeError('Unexpected output length from BCryptDeriveKey')
+
+    return bytes_from_buffer(result_buffer)

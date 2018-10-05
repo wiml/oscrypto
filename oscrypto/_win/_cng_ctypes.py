@@ -155,7 +155,7 @@ try:
 
     bcrypt.BCryptDeriveKey.argtypes = [
         BCRYPT_SECRET_HANDLE,
-        LPCWSTR
+        LPCWSTR,
         c_void_p,  # BCryptBufferDesc *pParameterList,
         PUCHAR,
         ULONG,
@@ -302,3 +302,5 @@ setattr(bcrypt, 'BCRYPT_PKCS1_PADDING_INFO', BCRYPT_PKCS1_PADDING_INFO)
 setattr(bcrypt, 'BCRYPT_PSS_PADDING_INFO', BCRYPT_PSS_PADDING_INFO)
 setattr(bcrypt, 'BCRYPT_OAEP_PADDING_INFO', BCRYPT_OAEP_PADDING_INFO)
 setattr(bcrypt, 'BCRYPT_KEY_DATA_BLOB_HEADER', BCRYPT_KEY_DATA_BLOB_HEADER)
+setattr(bcrypt, 'BCryptBuffer', BCryptBuffer)
+setattr(bcrypt, 'BCryptBufferDesc', BCryptBufferDesc)
